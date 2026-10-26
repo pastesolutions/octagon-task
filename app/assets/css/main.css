@@ -1,0 +1,165 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--gradient-page) fixed, var(--color-bg);
+    color: var(--color-text);
+    font: 500 var(--text-sm);
+}
+
+h1, h2, h3, p {
+    margin: 0;
+}
+
+a {
+    color: inherit;
+}
+
+button, input, select, textarea {
+    font: inherit;
+}
+
+.container {
+    width: 100%;
+    max-width: calc(var(--container) + var(--gutter) * 2);
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+}
+
+.page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.page__title {
+    font: 700 var(--text-xl);
+}
+
+.page__subtitle {
+    font-weight: 400;
+    color: var(--color-text-muted);
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+}
+
+.card__title {
+    font: 600 var(--text-lg);
+}
+
+.section-title {
+    font: 600 var(--text-lg);
+}
+
+@media (max-width: 767px) {
+    .page__title {
+        font-size: 24px;
+        line-height: 31px;
+    }
+
+    .mobile-full {
+        width: 100%;
+    }
+}
+
+.ticket-grid {
+    display: grid;
+    grid-template-columns: 62px minmax(0, 1fr) 140px 110px 120px 130px;
+    align-items: center;
+    gap: 12px;
+}
+
+@media (max-width: 1279px) {
+    .ticket-grid {
+        grid-template-columns: 62px minmax(0, 1fr) 120px 130px;
+    }
+
+    .ticket-grid__wide {
+        display: none;
+    }
+}
+
+@media (max-width: 767px) {
+    .ticket-grid__wide {
+        display: inline;
+    }
+}
+
+.nav-link {
+    margin: -8px -12px;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    font: 500 var(--text-sm);
+    text-decoration: none;
+}
+
+.nav-link:hover,
+.nav-link.router-link-active {
+    color: var(--color-nav-hover);
+}
+
+.nav-link:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 0;
+}
+
+.icon-button {
+    display: inline-flex;
+    margin: -8px;
+    padding: 8px;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+}
+
+.icon-button:hover {
+    background: var(--color-icon-hover-bg);
+    color: var(--color-text);
+}
+
+.icon-button:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 0;
+}
+
+.icon-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.skip-link {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 200;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text);
+    transform: translateY(-200%);
+}
+
+.skip-link:focus {
+    transform: none;
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+main:focus {
+    outline: none;
+}
