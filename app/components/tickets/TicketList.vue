@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Ticket } from '~/utils/mockData';
+import type { Ticket } from '~/types/ticket';
 
 defineProps<{ tickets: Ticket[] }>();
 

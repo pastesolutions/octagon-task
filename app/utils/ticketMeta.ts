@@ -1,4 +1,4 @@
-import type { TicketPriority, TicketStatus } from './mockData';
+import type { TicketPriority, TicketStatus } from '~/types/ticket';
 
 export const statusLabels: Record<TicketStatus, string> = {
     new: 'Новая',
@@ -30,5 +30,3 @@ export const sortOptions = [
     { value: 'newest', label: 'Сначала новые' },
     { value: 'oldest', label: 'Сначала старые' },
 ];
-
-export const assigneeNames = ['Брунгильда Б.', 'Олег С.'];

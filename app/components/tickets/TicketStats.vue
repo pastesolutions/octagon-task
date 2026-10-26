@@ -1,28 +1,24 @@
 <script setup lang="ts">
-import type { Ticket, TicketStatus } from '~/utils/mockData';
+import type { TicketStatsView } from '~/types/ticket';
 
-const props = defineProps<{ tickets: Ticket[]; pending?: boolean }>();
+const props = defineProps<{ stats?: TicketStatsView }>();
 
-function countBy(status: TicketStatus) {
-    return props.tickets.filter((ticket) => ticket.status === status).length;
-}
-
-const stats = computed(() => [
-    { title: 'Новые заявки', value: countBy('new'), hint: 'Ожидают назначения' },
-    { title: 'В работе', value: countBy('in_progress'), hint: 'Назначены исполнителям' },
-    { title: 'Ожидают ответа', value: countBy('waiting'), hint: 'Нужна информация' },
-    { title: 'Решены', value: countBy('resolved'), hint: 'За эту неделю' },
+const cards = computed(() => [
+    { title: 'Новые заявки', value: props.stats?.new, hint: 'Ожидают назначения' },
+    { title: 'В работе', value: props.stats?.inProgress, hint: 'Назначены исполнителям' },
+    { title: 'Ожидают ответа', value: props.stats?.waiting, hint: 'Нужна информация' },
+    { title: 'Решены', value: props.stats?.resolved, hint: 'За эту неделю' },
 ]);
 </script>
 
 <template>
     <div class="stats">
         <StatCard
-            v-for="stat in stats"
-            :key="stat.title"
-            :title="stat.title"
-            :value="pending ? '—' : stat.value"
-            :hint="stat.hint"
+            v-for="card in cards"
+            :key="card.title"
+            :title="card.title"
+            :value="card.value ?? '—'"
+            :hint="card.hint"
         />
     </div>
 </template>

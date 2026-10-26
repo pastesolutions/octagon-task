@@ -3,6 +3,7 @@ defineProps<{
     label: string;
     options: { value: string; label: string }[];
     disabled?: boolean;
+    error?: string;
 }>();
 
 const model = defineModel<string>({default: ''});
@@ -16,12 +17,16 @@ const id = useId();
             :id="id"
             v-model="model"
             class="field__control"
+            :class="{ 'field__control--error': error }"
             :disabled="disabled"
+            :aria-invalid="!!error"
+            :aria-describedby="error ? `${id}-error` : undefined"
         >
             <option v-for="option in options" :key="option.value" :value="option.value">
                 {{ option.label }}
             </option>
         </select>
+        <p v-if="error" :id="`${id}-error`" class="field__error">{{ error }}</p>
     </div>
 </template>
 
@@ -63,5 +68,15 @@ const id = useId();
     border-color: var(--color-border-disabled);
     cursor: not-allowed;
     opacity: 0.6;
+}
+.field__control--error,
+.field__control--error:hover:not(:disabled) {
+    border-color: var(--color-error);
+    box-shadow: 0 0 0 1px var(--color-error);
+}
+
+.field__error {
+    font: 500 var(--text-xs);
+    color: var(--color-error);
 }
 </style>

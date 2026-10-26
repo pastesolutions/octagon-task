@@ -1,23 +1,30 @@
 <script setup lang="ts">
-import type { NewTicket } from '~/composables/useTickets';
-import type { TicketPriority } from '~/utils/mockData';
+import { API_PRIORITIES, type ApiCreateRequestBody } from '#shared/types/api';
 import { priorityOptions } from '~/utils/ticketMeta';
 
 const open = defineModel<boolean>({ default: false });
-const emit = defineEmits<{ submit: [ticket: NewTicket] }>();
+const props = defineProps<{ submitting?: boolean; error?: string }>();
+const emit = defineEmits<{ submit: [body: ApiCreateRequestBody] }>();
+
+const { customers } = useDictionaries();
 
 const title = ref('');
-const client = ref('');
-const priority = ref<string>('normal');
+const customerId = ref('');
+const priority = ref('normal');
 const description = ref('');
 const submitted = ref(false);
 
+const customerOptions = computed(() => [
+    { value: '', label: 'Выберите клиента' },
+    ...customers.value.map((customer) => ({ value: String(customer.id), label: customer.name })),
+]);
+
 const titleError = computed(() => (submitted.value && !title.value.trim() ? 'Укажите тему заявки.' : undefined));
-const clientError = computed(() => (submitted.value && !client.value.trim() ? 'Укажите клиента.' : undefined));
+const customerError = computed(() => (submitted.value && !customerId.value ? 'Выберите клиента.' : undefined));
 
 function reset() {
     title.value = '';
-    client.value = '';
+    customerId.value = '';
     priority.value = 'normal';
     description.value = '';
     submitted.value = false;
@@ -29,15 +36,14 @@ watch(open, (isOpen) => {
 
 function submit() {
     submitted.value = true;
-    if (titleError.value || clientError.value) return;
+    if (titleError.value || customerError.value || props.submitting) return;
 
     emit('submit', {
         title: title.value.trim(),
-        client: client.value.trim(),
-        priority: priority.value as TicketPriority,
-        description: description.value.trim(),
+        customerId: Number(customerId.value),
+        priority: isOneOf(priority.value, API_PRIORITIES) ? priority.value : 'normal',
+        description: description.value.trim() || undefined,
     });
-    open.value = false;
 }
 </script>
 
@@ -45,12 +51,13 @@ function submit() {
     <AppModal v-model="open" title="Новая заявка">
         <form class="form" novalidate @submit.prevent="submit">
             <AppInput v-model="title" label="Тема" placeholder="Кратко опишите проблему" :error="titleError" />
-            <AppInput v-model="client" label="Клиент" placeholder="Название компании" :error="clientError" />
+            <AppSelect v-model="customerId" label="Клиент" :options="customerOptions" :error="customerError" />
             <AppSelect v-model="priority" label="Приоритет" :options="priorityOptions" />
             <AppTextarea v-model="description" label="Описание" placeholder="Что случилось и когда" />
+            <p v-if="error" class="form__error" role="alert">{{ error }}</p>
             <div class="form__actions">
                 <AppButton variant="secondary" @click="open = false">Отмена</AppButton>
-                <AppButton type="submit">Создать заявку</AppButton>
+                <AppButton type="submit" :disabled="submitting">{{ submitting ? 'Создаём…' : 'Создать заявку' }}</AppButton>
             </div>
         </form>
     </AppModal>
@@ -61,6 +68,10 @@ function submit() {
     display: flex;
     flex-direction: column;
     gap: 16px;
+}
+
+.form__error {
+    color: var(--color-error);
 }
 
 .form__actions {

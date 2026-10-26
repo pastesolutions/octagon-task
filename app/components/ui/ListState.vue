@@ -1,6 +1,44 @@
 <script setup lang="ts">
-defineProps<{ state: 'loading' | 'empty' | 'error'; title?: string; message?: string }>();
+import type { IconName } from './AppIcon.vue';
+
+const props = withDefaults(
+    defineProps<{
+        state: 'loading' | 'empty' | 'error';
+        title?: string;
+        message?: string;
+        icon?: IconName;
+        retrying?: boolean;
+        retryAfter?: number;
+    }>(),
+    { icon: 'inbox-empty' },
+);
 defineEmits<{ retry: [] }>();
+
+const secondsLeft = ref(0);
+let timer: ReturnType<typeof setInterval> | undefined;
+
+function stopCountdown() {
+    clearInterval(timer);
+    timer = undefined;
+}
+
+watch(() => props.retryAfter, (seconds) => {
+    stopCountdown();
+    secondsLeft.value = seconds ?? 0;
+    if (!seconds || import.meta.server) return;
+    timer = setInterval(() => {
+        secondsLeft.value -= 1;
+        if (secondsLeft.value <= 0) stopCountdown();
+    }, 1000);
+}, { immediate: true });
+
+onBeforeUnmount(stopCountdown);
+
+const retryLabel = computed(() => {
+    if (props.retrying) return 'Загружаем…';
+    if (secondsLeft.value > 0) return `Повторить через ${secondsLeft.value} с`;
+    return 'Повторить загрузку';
+});
 </script>
 
 <template>
@@ -10,7 +48,7 @@ defineEmits<{ retry: [] }>();
     </div>
 
     <div v-else-if="state === 'empty'" class="state" role="status">
-        <AppIcon name="inbox-empty" />
+        <AppIcon :name="icon" />
         <h3 class="state__title">{{ title ?? 'Заявок пока нет' }}</h3>
         <p class="state__text">{{ message ?? 'Обращения появятся здесь после создания.' }}</p>
         <slot name="action" />
@@ -20,7 +58,7 @@ defineEmits<{ retry: [] }>();
         <AppIcon name="alert" />
         <h3 class="state__title">{{ title ?? 'Не удалось загрузить заявки' }}</h3>
         <p class="state__text">{{ message ?? 'Сервис временно недоступен. Попробуйте ещё раз.' }}</p>
-        <AppButton @click="$emit('retry')">Повторить загрузку</AppButton>
+        <AppButton :disabled="retrying || secondsLeft > 0" @click="$emit('retry')">{{ retryLabel }}</AppButton>
     </div>
 </template>
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TicketHistoryItem } from '~/utils/mockData';
+import type { TicketHistoryItem } from '~/types/ticket';
 
 defineProps<{ items: TicketHistoryItem[] }>();
 </script>
@@ -10,7 +10,7 @@ defineProps<{ items: TicketHistoryItem[] }>();
         <ol class="timeline">
             <li v-for="item in items" :key="item.id" class="timeline__item">
                 <time class="timeline__time">{{ item.time }}</time>
-                <span>{{ item.author }}</span>
+                <span>{{ item.text }}</span>
             </li>
         </ol>
     </section>

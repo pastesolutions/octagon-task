@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import type { TicketComment } from '~/utils/mockData';
+import type { TicketComment } from '~/types/ticket';
 
-defineProps<{ comments: TicketComment[] }>();
-const emit = defineEmits<{ add: [text: string] }>();
+const props = defineProps<{
+    comments: TicketComment[];
+    send: (text: string) => Promise<boolean>;
+    error?: string;
+}>();
 
 const draft = ref('');
+const sending = ref(false);
 
-function submit() {
-    if (!draft.value.trim()) return;
-    emit('add', draft.value.trim());
-    draft.value = '';
+async function submit() {
+    const text = draft.value.trim();
+    if (!text || sending.value) return;
+    sending.value = true;
+    const sent = await props.send(text);
+    sending.value = false;
+    if (sent) draft.value = '';
 }
 </script>
 
@@ -25,7 +32,8 @@ function submit() {
         </ul>
         <form class="comments__form" @submit.prevent="submit">
             <AppTextarea v-model="draft" label="Ваш комментарий" placeholder="Напишите сообщение…" />
-            <AppButton type="submit" :disabled="!draft.trim()">Отправить комментарий</AppButton>
+            <p v-if="error" class="comments__error" role="alert">{{ error }}</p>
+            <AppButton type="submit" :disabled="!draft.trim() || sending">{{ sending ? 'Отправляем…' : 'Отправить комментарий' }}</AppButton>
         </form>
     </section>
 </template>
@@ -36,6 +44,7 @@ function submit() {
 .comment__meta { font: 600 var(--text-xs); color: var(--color-text-muted); }
 .comment__text { font: 400 var(--text-sm); color: var(--color-text); }
 .comments__empty { font-weight: 400; color: var(--color-text-muted); }
+.comments__error { color: var(--color-error); }
 .comments__form { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
 .comments__form > :first-child { align-self: stretch; }
 </style>

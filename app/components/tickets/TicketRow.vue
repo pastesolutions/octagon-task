@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Ticket } from '~/utils/mockData';
+import type { Ticket } from '~/types/ticket';
 
 defineProps<{ ticket: Ticket }>();
 </script>
@@ -9,8 +9,8 @@ defineProps<{ ticket: Ticket }>();
         <span class="row__id">#{{ ticket.id }}</span>
         <NuxtLink class="row__title" :to="`/requests/${ticket.id}`">{{ ticket.title }}</NuxtLink>
         <span class="row__group">
-            <span class="ticket-grid__wide">{{ ticket.client }}</span>
-            <span class="ticket-grid__wide">{{ ticket.assignee ?? 'Не назначен' }}</span>
+            <span class="ticket-grid__wide row__cell">{{ ticket.client }}</span>
+            <span class="ticket-grid__wide row__cell">{{ ticket.assignee }}</span>
         </span>
         <span class="row__group">
             <span><StatusBadge :status="ticket.status" /></span>
@@ -41,6 +41,11 @@ defineProps<{ ticket: Ticket }>();
     color: inherit;
     text-decoration: none;
     border-radius: var(--radius-sm);
+}
+
+.row__title,
+.row__cell {
+    overflow-wrap: anywhere;
 }
 
 .row__title:hover {

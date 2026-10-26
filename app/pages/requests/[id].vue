@@ -1,89 +1,170 @@
 <script setup lang="ts">
-import type { TicketPriority } from '~/utils/mockData';
-import { assigneeNames, priorityOptions } from '~/utils/ticketMeta';
+import { API_PRIORITIES } from '#shared/types/api';
+import { priorityOptions } from '~/utils/ticketMeta';
 
 definePageMeta({ key: (route) => route.fullPath });
 
 const route = useRoute();
-const { ticket, addComment, assign, setPriority } = useTicket(() => Number(route.params.id));
+const { scenario, clearScenario } = useApiScenario();
+const id = computed(() => Number(route.params.id));
 
-if (!ticket.value) {
-    throw createError({ statusCode: 404, statusMessage: 'Заявка не найдена' });
+const { request, ticket, isLoading, errorInfo, refresh, addComment, update } = useRequestDetails(id, scenario);
+const { executors } = useDictionaries();
+
+if (import.meta.server) {
+    await request;
+    if (errorInfo.value?.statusCode === 404) {
+        throw createError({ statusCode: 404, message: 'Заявка не найдена' });
+    }
 }
 
-useHead({ title: () => `#${ticket.value?.id} ${ticket.value?.title ?? ''}` });
+watch(errorInfo, (info) => {
+    if (info?.statusCode === 404) showError({ statusCode: 404, message: 'Заявка не найдена' });
+});
 
-const assignee = ref(ticket.value.assignee ?? '');
-const priority = ref<string>(ticket.value.priority);
-const assigned = ref(false);
+useHead({ title: () => (ticket.value ? `#${ticket.value.id} ${ticket.value.title}` : 'Заявка') });
 
-const assigneeOptions = [
+const assigneeId = ref('');
+const priority = ref('');
+const paramsMessage = ref<string>();
+const paramsError = ref<string>();
+const commentError = ref<string>();
+const isSaving = ref(false);
+
+watch(ticket, (value) => {
+    if (!value) return;
+    assigneeId.value = value.assigneeId ? String(value.assigneeId) : '';
+    priority.value = value.priority;
+}, { immediate: true });
+
+const assigneeOptions = computed(() => [
     { value: '', label: 'Не назначен' },
-    ...assigneeNames.map((name) => ({ value: name, label: name })),
-];
+    ...executors.value.map((user) => ({ value: String(user.id), label: user.shortName })),
+]);
 
-const canAssign = computed(() => Boolean(assignee.value) && assignee.value !== ticket.value?.assignee);
+const canAssign = computed(() =>
+    Boolean(assigneeId.value) && Number(assigneeId.value) !== ticket.value?.assigneeId && !isSaving.value,
+);
 
-watch(priority, (value) => setPriority(value as TicketPriority));
-watch(assignee, () => (assigned.value = false));
+async function saveParams(body: Parameters<typeof update>[0], success?: string) {
+    isSaving.value = true;
+    paramsError.value = undefined;
+    paramsMessage.value = undefined;
+    try {
+        await update(body);
+        paramsMessage.value = success;
+    } catch (error) {
+        paramsError.value = toApiErrorInfo(error).message;
+        if (ticket.value) priority.value = ticket.value.priority;
+    } finally {
+        isSaving.value = false;
+    }
+}
 
 function onAssign() {
-    assign(assignee.value);
-    assigned.value = true;
+    return saveParams({ assigneeId: Number(assigneeId.value) }, 'Исполнитель назначен');
+}
+
+function onPriorityChange(value: string) {
+    if (!isOneOf(value, API_PRIORITIES) || value === ticket.value?.priority) return;
+    return saveParams({ priority: value });
+}
+
+async function sendComment(text: string): Promise<boolean> {
+    commentError.value = undefined;
+    try {
+        await addComment(text);
+        return true;
+    } catch (error) {
+        commentError.value = toApiErrorInfo(error).message;
+        return false;
+    }
+}
+
+function retry() {
+    if (scenario.value) clearScenario();
+    else refresh();
 }
 </script>
 
 <template>
-    <div v-if="ticket" class="page">
+    <div class="page">
         <div>
             <AppButton variant="ghost" to="/requests">← К списку заявок</AppButton>
         </div>
 
-        <h1 class="page__title">{{ ticket.title }}</h1>
-        <p class="page__subtitle">#{{ ticket.id }} · Создана {{ formatDate(ticket.createdAt) }}</p>
+        <ListState
+            v-if="errorInfo && errorInfo.statusCode !== 404"
+            state="error"
+            title="Не удалось загрузить заявку"
+            :message="errorInfo.message"
+            :retry-after="errorInfo.retryAfter"
+            :retrying="isLoading"
+            @retry="retry"
+        />
 
-        <div class="ticket__badges">
-            <StatusBadge :status="ticket.status" />
-            <PriorityBadge :priority="ticket.priority" />
-        </div>
+        <TicketDetailsSkeleton v-else-if="isLoading || !ticket" />
 
-        <div class="ticket__grid">
-            <div class="ticket__main">
-                <section class="card">
-                    <h2 class="card__title">Описание проблемы</h2>
-                    <p class="ticket__description">{{ ticket.description || 'Описание не заполнено.' }}</p>
-                </section>
+        <template v-else>
+            <h1 class="page__title ticket__title">{{ ticket.title }}</h1>
+            <p class="page__subtitle">#{{ ticket.id }} · Создана {{ formatDate(ticket.createdAt) }}</p>
 
-                <TicketComments :comments="ticket.comments" @add="addComment" />
-                <TicketTimeline v-if="ticket.history.length" :items="ticket.history" />
+            <div class="ticket__badges">
+                <StatusBadge :status="ticket.status" />
+                <PriorityBadge :priority="ticket.priority" />
             </div>
 
-            <aside class="card" aria-labelledby="params-title">
-                <h2 id="params-title" class="card__title">Параметры</h2>
+            <div class="ticket__grid">
+                <div class="ticket__main">
+                    <section class="card">
+                        <h2 class="card__title">Описание проблемы</h2>
+                        <p class="ticket__description">{{ ticket.description }}</p>
+                    </section>
 
-                <dl class="params">
-                    <dt>Клиент</dt>
-                    <dd>{{ ticket.client }}</dd>
-                    <dt>Категория</dt>
-                    <dd>{{ ticket.category }}</dd>
-                </dl>
+                    <TicketComments :comments="ticket.comments" :send="sendComment" :error="commentError" />
+                    <TicketTimeline v-if="ticket.history.length" :items="ticket.history" />
+                </div>
 
-                <AppSelect v-model="assignee" label="Исполнитель" :options="assigneeOptions" />
-                <AppSelect v-model="priority" label="Приоритет" :options="priorityOptions" />
+                <aside class="card" aria-labelledby="params-title">
+                    <h2 id="params-title" class="card__title">Параметры</h2>
 
-                <dl class="params">
-                    <dt>Срок решения</dt>
-                    <dd class="params__deadline">{{ formatDate(ticket.deadline) }}</dd>
-                </dl>
+                    <dl class="params">
+                        <dt>Клиент</dt>
+                        <dd>{{ ticket.client }}</dd>
+                        <dt>Категория</dt>
+                        <dd>{{ ticket.category }}</dd>
+                    </dl>
 
-                <AppButton :disabled="!canAssign" @click="onAssign">Назначить исполнителя</AppButton>
-                <p v-if="assigned" class="params__done" role="status">Исполнитель назначен</p>
-            </aside>
-        </div>
+                    <AppSelect v-model="assigneeId" label="Исполнитель" :options="assigneeOptions" />
+                    <AppSelect
+                        v-model="priority"
+                        label="Приоритет"
+                        :options="priorityOptions"
+                        :disabled="isSaving"
+                        @update:model-value="onPriorityChange"
+                    />
+
+                    <dl class="params">
+                        <dt>Срок решения</dt>
+                        <dd class="params__deadline">{{ formatDate(ticket.deadline) }}</dd>
+                    </dl>
+
+                    <AppButton :disabled="!canAssign" @click="onAssign">Назначить исполнителя</AppButton>
+                    <p v-if="paramsMessage" class="params__done" role="status">{{ paramsMessage }}</p>
+                    <p v-if="paramsError" class="params__error" role="alert">{{ paramsError }}</p>
+                </aside>
+            </div>
+        </template>
     </div>
 </template>
 
 <style scoped>
+.ticket__title,
+.ticket__description,
+.params dd {
+    overflow-wrap: anywhere;
+}
+
 .ticket__badges {
     display: flex;
     align-items: center;
@@ -129,6 +210,10 @@ function onAssign() {
 
 .params__done {
     color: var(--status-resolved);
+}
+
+.params__error {
+    color: var(--color-error);
 }
 
 @media (max-width: 767px) {

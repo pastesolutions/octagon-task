@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TicketStatus } from '~/utils/mockData';
+import type { TicketStatus } from '~/types/ticket';
 import { statusLabels } from '~/utils/ticketMeta';
 
 const props = defineProps<{ status: TicketStatus }>();

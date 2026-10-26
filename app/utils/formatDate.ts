@@ -7,7 +7,8 @@ function startOfDay(date: Date): number {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
 }
 
-export function formatDate(iso: string, now: Date = new Date()): string {
+export function formatDate(iso: string | null, now: Date = new Date()): string {
+    if (!iso) return 'Не указан';
     const date = new Date(iso);
     const time = timeFormatter.format(date);
     const diff = Math.round((startOfDay(date) - startOfDay(now)) / DAY);
@@ -20,9 +21,4 @@ export function formatDate(iso: string, now: Date = new Date()): string {
 
 export function formatTime(date: Date = new Date()): string {
     return timeFormatter.format(date);
-}
-
-export function toLocalIso(date: Date): string {
-    const pad = (value: number) => String(value).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
 }

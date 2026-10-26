@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TicketPriority } from '~/utils/mockData';
+import type { TicketPriority } from '~/types/ticket';
 import { priorityLabels } from '~/utils/ticketMeta';
 
 defineProps<{ priority: TicketPriority }>();
